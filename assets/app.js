@@ -6,7 +6,8 @@
   var MODES = {
     flash: { title: "Flashcardy", desc: "Otoč kartu a ohodť se", dir: "es2cs" },
     choice: { title: "Výběr z možností", desc: "Česky → španělsky", dir: "cs2es" },
-    type: { title: "Psaní", desc: "Španělsky → česky", dir: "es2cs" }
+    type: { title: "Psaní česky", desc: "Uvidíš španělsky, napíšeš česky", dir: "es2cs", typed: true },
+    typeEs: { title: "Psaní španělsky", desc: "Uvidíš česky, napíšeš španělsky", dir: "cs2es", typed: true }
   };
 
   var el = function (id) { return document.getElementById(id); };
@@ -69,12 +70,12 @@
 
   /* vybere nesprávné možnosti, každý text jen jednou a nikdy nesmí být
      shodný se správnou odpovědí */
-  function pickWrong(answerText, entries, askEs) {
+  function pickWrong(answerText, entries, askCs) {
     var used = [answerText];
     var out = [];
     shuffle(entries).forEach(function (x) {
       if (out.length >= 3) return;
-      var t = askEs ? x.cs : x.es;
+      var t = askCs ? x.cs : x.es;
       if (used.indexOf(t) < 0) { used.push(t); out.push(t); }
     });
     return out;
@@ -223,7 +224,7 @@
     show("session");
     el("card-view").hidden = session.mode !== "flash";
     el("mc-view").hidden = session.mode !== "choice";
-    el("type-view").hidden = session.mode !== "type";
+    el("type-view").hidden = !MODES[session.mode].typed;
     el("grades").hidden = true;
     nextCard();
   }
@@ -289,7 +290,13 @@
 
   function renderType() {
     var e = session.current;
-    el("type-prompt").innerHTML = "Přelož do češtiny:" + '<span class="word">' + esc(e.es) + "</span>";
+    var askCs = MODES[session.mode].dir === "es2cs";
+    el("type-prompt").innerHTML =
+      (askCs ? "Přelož do češtiny:" : "Přelož do španělštiny:") +
+      '<span class="word">' + esc(askCs ? e.es : e.cs) + "</span>";
+    el("type-hint").textContent = askCs
+      ? "Enter = zkontrolovat · diakritika nejsou potřeba, lomítko beru jako „nebo“"
+      : "Enter = zkontrolovat · projde to i bez článku a bez diakritiky";
     var inp = el("type-input");
     inp.value = "";
     inp.disabled = false;
@@ -316,15 +323,39 @@
       .trim();
   }
 
-  function answersFor(e, askEs) {
-    var text = askEs ? e.cs : e.es;
-    return String(text).split("/").map(fold).filter(Boolean);
+  var ARTICLE = /^(el|la|los|las|un|una) /;
+
+  function answersFor(e, askCs) {
+    var text = askCs ? e.cs : e.es;
+    return String(text).split("/").map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  /* najde napsanou odpověď mezi alternativami. Bez diakritiky a bez článku
+     je to pořád totéž slovo, takže to bereme jako správné, jen to napíšeme
+     jinak — kvůli si/sí a tu/tú by to byla zbytečně drsná hádanka. */
+  function matchAnswer(list, typed, dropArticle) {
+    var t = typed.trim().toLowerCase();
+    var tf = fold(t);
+    var exact = null, folded = null, bare = null;
+    list.forEach(function (a) {
+      var al = a.toLowerCase();
+      if (al === t) { if (!exact) exact = a; return; }
+      var f = fold(a);
+      if (f === tf) { if (!folded) folded = a; return; }
+      if (!dropArticle) return;
+      var m = f.match(ARTICLE);
+      if (m && f.slice(m[0].length).trim() === tf) bare = bare || a;
+    });
+    if (exact) return { text: exact, exact: true };
+    if (folded) return { text: folded, exact: false };
+    if (bare) return { text: bare, exact: false };
+    return null;
   }
 
   function checkType() {
-    if (!session || session.mode !== "type") return;
+    if (!session || !MODES[session.mode].typed) return;
     var e = session.current;
-    var askEs = MODES[session.mode].dir === "es2cs";
+    var askCs = MODES[session.mode].dir === "es2cs";
     var inp = el("type-input");
     var btn = el("type-btn");
     var fb = el("type-feedback");
@@ -333,17 +364,18 @@
     if (!typed) { fb.textContent = "Tak co — napiš aspoň něco."; return; }
     if (btn.textContent !== "Zkontrolovat") { nextCard(); return; }   /* už ověřeno = další */
 
-    var list = answersFor(e, askEs);
-    var ok = list.indexOf(typed) >= 0;
-    var right = askEs ? e.cs : e.es;
+    var hit = matchAnswer(answersFor(e, askCs), inp.value, !askCs);
+    var right = askCs ? e.cs : e.es;
 
-    grade(ok ? 2 : 0);
+    grade(hit ? 2 : 0);
     updateProgress();
 
     inp.disabled = true;
-    inp.className = ok ? "right" : "wrong";
-    fb.className = "feedback " + (ok ? "right" : "wrong");
-    fb.textContent = (ok ? "✓ Správně!" : "✗ Správně je „" + right + "“.");
+    inp.className = hit ? "right" : "wrong";
+    fb.className = "feedback " + (hit ? "right" : "wrong");
+    fb.textContent = !hit ? "✗ Správně je „" + right + "“."
+      : hit.exact ? "✓ Správně!"
+      : "✓ Téměř — správně se píše „" + hit.text + "“.";
     btn.textContent = "Další";
     btn.className = "primary";
     btn.focus();
@@ -353,19 +385,19 @@
 
   function renderChoice() {
     var e = session.current;
-    var askEs = MODES[session.mode].dir === "es2cs";
+    var askCs = MODES[session.mode].dir === "es2cs";
 
     el("mc-prompt").innerHTML =
-      (askEs ? "Přelož do češtiny:" : "Jak se řekne česky?") +
-      '<span class="word">' + (askEs ? esc(e.es) : esc(e.cs)) + "</span>";
+      (askCs ? "Přelož do češtiny:" : "Jak se řekne česky?") +
+      '<span class="word">' + (askCs ? esc(e.es) : esc(e.cs)) + "</span>";
 
     /* 3 nesprávné možnosti ze stejného okruhu, s podobným slovním druhem */
     var sameKind = pool(session.deck).filter(function (x) { return x.pos === e.pos; });
     var any = pool(session.deck);
-    var answerText = askEs ? e.cs : e.es;
-    var wrong = pickWrong(answerText, sameKind.length >= 3 ? sameKind : any, askEs);
+    var answerText = askCs ? e.cs : e.es;
+    var wrong = pickWrong(answerText, sameKind.length >= 3 ? sameKind : any, askCs);
     if (wrong.length < 3) {
-      wrong = wrong.concat(pickWrong(answerText, pool("MIX"), askEs).slice(0, 3 - wrong.length));
+      wrong = wrong.concat(pickWrong(answerText, pool("MIX"), askCs).slice(0, 3 - wrong.length));
     }
 
     var opts = shuffle(wrong.concat([answerText]));
@@ -381,12 +413,12 @@
       b.className = "option";
       b.type = "button";
       b.textContent = text;
-      b.addEventListener("click", function () { pickOption(b, text, answerText, e, askEs); });
+      b.addEventListener("click", function () { pickOption(b, text, answerText, e, askCs); });
       box.appendChild(b);
     });
   }
 
-  function pickOption(btn, text, correct, entry, askEs) {
+  function pickOption(btn, text, correct, entry, askCs) {
     var ok = text === correct;
     var all = el("mc-options").querySelectorAll(".option");
     Array.prototype.forEach.call(all, function (b) {
@@ -645,7 +677,7 @@
   document.addEventListener("keydown", function (ev) {
     if (screens.session.hidden) return;
     /* v psaní se píše do pole, klávesy 1–4 patří textu, ne kartám */
-    if (session.mode === "type") {
+    if (MODES[session.mode].typed) {
       /* na poli i tlačítku Enter vyvolá událost samotný prohlížeč — kdyby se
          zpracoval i tady, přeskočila by se po každém ohodnocení karta */
       if (ev.target === el("type-input") || ev.target === el("type-btn")) return;

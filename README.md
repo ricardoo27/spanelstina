@@ -10,8 +10,9 @@ Aplikace na učení španělských slovíček. Statický HTML/JavaScript, žádn
   pozná podle názvu, takže import stejného okruhu slovíčka přepíše
 - **výběr okruhu** — každý tematický okruh se dá procvičit sám, nebo všechny
   dohromady
-- tři režimy: **flashcardy** (otáčení), **výběr z možností** (česky → španělsky)
-  a **psaní** (španělsky → česky, překlad napíšeš sám)
+- čtyři režimy: **flashcardy** (otáčení), **výběr z možností** (česky → španělsky)
+  a **psaní** v obou směrech — **česky** (španělské slovo, překlad napíšeš sám)
+  i **španělsky** (české slovo, španělsky to napíšeš sám)
 - plánování opakování (SM-2), karty se vrací ve vhodných intervalech
 - postup se ukládá jen do prohlížeče (localStorage) — žádný účet, žádný server
 
@@ -51,20 +52,28 @@ ohodíš: *Nevím* / *Složité* / *Jisté* (klávesy 1–3).
 pokud možno ze stejného slovního druhu, aby to nebyla triviální hádanka (u slovese
 tedy dostaneš slovesa, ne podstatná jména). Klávesy 1–4.
 
-**Psaní** — vidíš španělské slovo, český překlad napíšeš do pole a dáš *Zkontrolovat*
-(Enter). Pole je po každé kartě vyčištěné a znovu se do něj zaměří, takže se jen
-píše. Správná odpověď se vrací do rozvrhu jako *Jisté*, chybná jako *Nevím* a karta
-se objeví znovu na konci relace. Aby to nebyla drsná hádanka, **se nepočítá
-diakritika, velikost písmen ani mezidokud v okolí** a **lomítko v překladu znamená
-„nebo“**: u `blanco/a – bílý/bílá` projde `bílá`, u `el –, la estantería – polička /
-knihovna` projde `knihovna` i `polička`. Správně napsaná odpověď s diakritikou
-samozřejmě taky.
+**Psaní česky** — vidíš španělské slovo, český překlad napíšeš do pole a dáš
+*Zkontrolovat* (Enter). **Psaní španělsky** je to samé obráceně: české slovo,
+španělský tvar. Pole je po každé kartě vyčištěné a znovu se do něj zaměří, takže
+se jen píše. Správná odpověď se vrací do rozvrhu jako *Jisté*, chybná jako
+*Nevím* a karta se objeví znovu na konci relace.
+
+Aby to nebyla drsná hádanka, **se nepočítá diakritika, velikost písmen ani mezery
+v okolí** a **lomítko v odpovědi znamená „nebo“**: u `blanco/a – bílý/bílá` projde
+`bílá`, u `la estantería – polička / knihovna` projde `knihovna` i `polička`.
+Správně napsaná odpověď s diakritikou samozřejmě taky.
+
+Když napíšeš správné slovo, ale jinak napsané — v psaní španělsky bez článku
+(`perro` místo `el perro`) nebo bez diakritiky (`cancion` místo `la canción`) —
+uhodne to jako správně, ale appka ti to připomene: *„✓ Téměř — správně se píše
+`el ratón`“*. Bez článku a bez diakritiky by to byla hádanka na psaní z klávesnice,
+ne na pamatování slovíček.
 
 Na konci relace uvidíš počet karet, kolik jsi zvládl a tempo.
 
 ## Klávesy
 
-| Klávesa | Flashcardy | Výběr z možností | Psaní |
+| Klávesa | Flashcardy | Výběr z možností | Psaní (obě šipky) |
 |---|---|---|---|
 | `1` `2` `3` | Nevím / Složité / Jisté | 1. / 2. / 3. možnost | píše se do pole |
 | `4` | — | 4. možnost | píše se do pole |
