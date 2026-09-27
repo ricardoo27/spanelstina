@@ -1,5 +1,6 @@
-/* Španelština — vlastní okruhy: parsování souboru a ukládání
-   Očekávaný formát (oddělovač je en/em dash nebo " - "):
+/* Španelština — okruhy: čtení souboru okruhy/vychozi.txt
+   Okruhy se nikam neukládají, pokaždé se jen načtou ze souboru — jediný zdroj
+   pravdy je ten .txt v repu. Formát (oddělovač je en/em dash nebo " - "):
 
      LOS ANIMALES – ZVÍŘATA
      el perro – pes
@@ -11,15 +12,13 @@
 (function () {
   "use strict";
 
-  var KEY = "spanelstina.decks.v1";
-
   /* en/em dash nemá v španělštině význam, takže ho bereme vždy;
      obyčejné minus jen když je obklopené mezerami (aby se nerozbilo "post-it") */
   var SEP = /(?:\s*[–—]\s*)|(?:\s+-\s+)/;
 
   var ARTICLE = /^(el|la|los|las|un|una|unos|unas)\s+/i;
 
-  /* --- čtení souboru --- */
+  var decks = [];
 
   function splitLine(line) {
     var at = 0;
@@ -64,12 +63,20 @@
       .replace(/^-|-$/g, "");
   }
 
+  function countWords(s) {
+    return s.split(/\s+/).filter(Boolean).length;
+  }
+
+  function newDeck(name, csName) {
+    return { id: "U:" + (slug(name) || "okruh"), name: name, csName: csName, note: "", words: [], index: {} };
+  }
+
   /* text -> { decks, skipped }
      Poznámka k okruhu: řádek bez oddělovače, který má aspoň 4 slova a není nadpis
      (např. "Zopakujte si čísla 1–100…"). Jednoslovný řádek bez oddělovače je
      raději chyba — bez překladu se slovíčkem nic neudělá. */
   function parse(text) {
-    var decks = [];
+    var out = [];
     var skipped = [];
     var current = null;
     var seen = {};
@@ -95,11 +102,11 @@
           var deck = newDeck(left, right);
           var at = seen[deck.id];
           if (at === undefined) {
-            seen[deck.id] = decks.length;
-            decks.push(deck);
+            seen[deck.id] = out.length;
+            out.push(deck);
             current = deck;
           } else {
-            current = decks[at];
+            current = out[at];
           }
           return;
         }
@@ -108,7 +115,7 @@
         if (!parts && countWords(left) >= 4) {
           if (!current) {
             current = newDeck("Bez názvu", "");
-            decks.push(current);
+            out.push(current);
           }
           current.note = current.note ? current.note + " " + line : line;
           return;
@@ -121,7 +128,7 @@
         }
         if (!current) {
           current = newDeck("Bez názvu", "");
-          decks.push(current);
+          out.push(current);
         }
         if (current.index[left] !== undefined) {
           skipped.push({ line: i + 1, text: raw, why: "„" + left + "“ už v okruhu je" });
@@ -131,110 +138,27 @@
         current.words.push({ es: left, cs: right, g: genderOf(left), pos: "n", ex: "" });
       });
 
-    return { decks: decks, skipped: skipped };
-  }
-
-  function countWords(s) {
-    return s.split(/\s+/).filter(Boolean).length;
-  }
-
-  function newDeck(name, csName) {
-    return { id: "U:" + (slug(name) || "okruh"), name: name, csName: csName, note: "", words: [], index: {} };
-  }
-
-  /* --- zápis --- */
-
-  function serialize(decks) {
-    return decks
-      .map(function (d) {
-        var head = (d.name || "OKRUH").toUpperCase() + (d.csName ? " – " + d.csName.toUpperCase() : "");
-        var out = [head];
-        if (d.note) out.push(d.note);   /* poznámka — bez oddělovače, naimportuje se zpět */
-        return out.concat(d.words.map(function (w) { return w.es + " – " + w.cs; })).join("\n");
-      })
-      .join("\n\n") + "\n";
-  }
-
-  /* starší verze ukládala pole přímo, nová { seeded, decks } — obě se načtou */
-  function load() {
-    var state = { seeded: false, decks: [] };
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return state;
-      var data = JSON.parse(raw);
-      if (Array.isArray(data)) state.decks = data;
-      else if (data && Array.isArray(data.decks)) {
-        state.decks = data.decks;
-        state.seeded = !!data.seeded;
-      }
-    } catch (e) {
-      /* poskozená data — začneme od prázdna */
-    }
-    state.decks = state.decks.filter(function (d) { return d && d.id && Array.isArray(d.words); });
-    state.decks.forEach(function (d) { if (!d.note) d.note = ""; });
-    return state;
-  }
-
-  var state = load();
-  var decks = state.decks;
-
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ seeded: state.seeded, decks: decks }));
-    } catch (e) {
-      /* soukromý režim — okruhy se ukážou, ale neuloží */
-    }
-  }
-
-  /* Výchozí sada se načte jen jednou, aby ji smazání nevrátilo zpět.
-     seed: true = už proběhlo (i když se nic nenačetlo). */
-  function seed() {
-    if (state.seeded) return null;
-    state.seeded = true;
-    var text = (window.SPANELSTINA || {}).defaultDecksText;
-    if (!text) { save(); return null; }
-    var r = parse(text);
-    if (r.decks.length) { importAll(r.decks); return r; }
-    save();
-    return null;
-  }
-
-  function get(id) {
-    for (var i = 0; i < decks.length; i++) if (decks[i].id === id) return decks[i];
-    return null;
-  }
-
-  /* okruh se stejným id přepíše, jeho slovíčka si ale nechají historii */
-  function importAll(parsed) {
-    parsed.forEach(function (d) {
-      delete d.index;              /* pomocná struktura jen na dobu parsingu */
-      var i = decks.findIndex(function (x) { return x.id === d.id; });
-      if (i >= 0) decks[i] = d;
-      else decks.push(d);
-    });
-    save();
-  }
-
-  function remove(id) {
-    decks = decks.filter(function (d) { return d.id !== id; });
-    save();
+    out.forEach(function (d) { delete d.index; });   /* pomocná struktura jen na dobu parsingu */
+    return { decks: out, skipped: skipped };
   }
 
   window.DECKS = {
+    /* nahradí okruhy novým souborem; vrací { decks, skipped } jako parse() */
+    set: function (text) {
+      var r = parse(text);
+      decks = r.decks;
+      return r;
+    },
     all: function () { return decks; },
     /* okruhy, z nichž se dá procvičovat — prázdný okruh (jen nadpis a poznámka)
-       v seznamu úrovní nabídnout nemá smysl */
+       v mřížce okruhů nabídnout nemá smysl */
     practiceable: function () {
       return decks.filter(function (d) { return d.words.length; });
     },
-    get: get,
-    parse: parse,
-    serialize: serialize,
-    importAll: importAll,
-    remove: remove,
-    seed: seed,
-    count: function () {
-      return decks.reduce(function (n, d) { return n + d.words.length; }, 0);
-    }
+    get: function (id) {
+      for (var i = 0; i < decks.length; i++) if (decks[i].id === id) return decks[i];
+      return null;
+    },
+    parse: parse
   };
 })();

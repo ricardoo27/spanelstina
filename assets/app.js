@@ -464,157 +464,6 @@
     show("summary");
   }
 
-  /* ---------- vlastní okruhy ---------- */
-
-  function say(msg, kind) {
-    var m = el("decks-msg");
-    m.textContent = msg;
-    m.className = "feedback" + (kind ? " " + kind : "");
-  }
-
-  function importText(text) {
-    var r = DECKS.parse(text);
-    if (!r.decks.length) {
-      say(
-        r.skipped.length
-          ? "Nepodařilo se nic naimportovat. " + skippedInfo(r.skipped)
-          : "V textu nejsou žádná slovíčka. Očekávám nadpis okruhu velkými písmeny a pod ním řádky „el perro – pes“.",
-        "wrong"
-      );
-      return;
-    }
-
-    DECKS.importAll(r.decks);
-    forgetRegistry();
-    sel.deck = r.decks[0].id;   /* rovnou se podívej na první nový okruh */
-    buildPickers();
-    renderHome();
-    renderDeckList();
-
-    var words = r.decks.reduce(function (n, d) { return n + d.words.length; }, 0);
-    var msg = "Přidáno: " + r.decks.length + " " + plural(r.decks.length, "okruh", "okruhy", "okruhů") +
-      ", " + words + " " + plural(words, "slovo", "slova", "slov") + ".";
-    if (r.skipped.length) msg += " " + skippedInfo(r.skipped);
-    say(msg, "right");
-  }
-
-  var DEFAULTS_FILE = "okruhy/vychozi.txt";
-
-  /* načte výchozí sadu přímo ze souboru v repu — když ji člověk upravil
-     a chce ji mít v prohlížeči */
-  function loadDefaultsFile() {
-    fetch(DEFAULTS_FILE, { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error(res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        var r = DECKS.parse(text);
-        if (!r.decks.length) {
-          say("V " + DEFAULTS_FILE + " nejsou žádná slovíčka.", "wrong");
-          return;
-        }
-        DECKS.importAll(r.decks);
-        forgetRegistry();
-        buildPickers();
-        renderHome();
-        renderDeckList();
-        var words = r.decks.reduce(function (n, d) { return n + d.words.length; }, 0);
-        var msg = "Načteno z " + DEFAULTS_FILE + ": " + r.decks.length + " " +
-          plural(r.decks.length, "okruh", "okruhy", "okruhů") + ", " + words + " " +
-          plural(words, "slovo", "slova", "slov") + ".";
-        if (r.skipped.length) msg += " " + skippedInfo(r.skipped);
-        say(msg, r.skipped.length ? "" : "right");
-      })
-      .catch(function () {
-        say(
-          "Soubor " + DEFAULTS_FILE + " nejde přes tuto stránku načíst. Otevři appku přes http (např. na GitHub Pages) nebo soubor rovnou přetáhni do zóny nahoře.",
-          "wrong"
-        );
-      });
-  }
-
-  function readFile(file) {
-    if (!file) return;
-    var fr = new FileReader();
-    fr.onload = function () { importText(String(fr.result)); };
-    fr.onerror = function () { say("Soubor se nepodařilo načíst.", "wrong"); };
-    fr.readAsText(file, "utf-8");
-  }
-
-  function download(text, filename) {
-    var url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  }
-
-  function renderDeckList() {
-    var box = el("decks-list");
-    var decks = DECKS.all();
-    el("export-btn").hidden = decks.length === 0;
-    box.innerHTML = "";
-    if (!decks.length) {
-      box.innerHTML = '<p class="note">Zatím žádné vlastní okruhy.</p>';
-      return;
-    }
-    decks.forEach(function (d) {
-      var row = document.createElement("div");
-      row.className = "deck-row";
-
-      var name = document.createElement("div");
-      name.className = "deck-name";
-      name.innerHTML = "<b>" + esc(d.name) + "</b>" +
-        (d.csName ? " <span>– " + esc(d.csName) + "</span>" : "") +
-        '<span class="deck-count">' + (d.words.length
-          ? d.words.length + " slov"
-          : "0 slov – jen poznámka") +
-        (d.note ? '<span class="deck-note">Poznámka: ' + esc(d.note) + "</span>" : "") +
-        "</span>";
-      row.appendChild(name);
-
-      var btns = document.createElement("div");
-      btns.className = "deck-btns";
-      if (d.words.length) {
-        btns.appendChild(miniBtn("Procvičit", function () {
-          sel.deck = d.id;
-          buildPickers();
-          renderHome();
-          el("decks-box").open = false;
-          start();
-        }));
-      }
-      btns.appendChild(miniBtn("Stáhnout", function () {
-        download(DECKS.serialize([d]), d.id.replace(/^U:/, "") + ".txt");
-      }));
-      btns.appendChild(miniBtn("Smazat", function () {
-        if (!confirm('Smazat okruh "' + d.name + '"?')) return;
-        DECKS.remove(d.id);
-        forgetRegistry();
-        buildPickers();
-        renderHome();
-        renderDeckList();
-        say('Smazán okruh "' + d.name + '".', "");
-      }, true));
-      row.appendChild(btns);
-
-      box.appendChild(row);
-    });
-  }
-
-  function miniBtn(text, onClick, danger) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "mini" + (danger ? " danger" : "");
-    b.textContent = text;
-    b.addEventListener("click", onClick);
-    return b;
-  }
-
   /* ---------- události ---------- */
 
   el("start-btn").addEventListener("click", start);
@@ -642,36 +491,6 @@
     if (!confirm("Opravdu smazat všechen uložený postup?")) return;
     SRS.reset();
     renderHome();
-  });
-
-  /* import: soubor, přetažení, vložený text, export */
-  el("pick-btn").addEventListener("click", function () { el("file-input").click(); });
-  el("file-input").addEventListener("change", function (ev) {
-    readFile(ev.target.files[0]);
-    ev.target.value = "";          /* aby šlo vybrat ten samý soubor znovu */
-  });
-  el("import-btn").addEventListener("click", function () {
-    var text = el("paste-area").value.trim();
-    if (!text) return say("Nejdřív něco vlož do textového pole.", "wrong");
-    importText(text);
-    el("paste-area").value = "";
-  });
-  el("reload-defaults").addEventListener("click", loadDefaultsFile);
-  el("export-btn").addEventListener("click", function () {
-    download(DECKS.serialize(DECKS.all()), "spanelstina-okruhy.txt");
-  });
-
-  var dz = el("dropzone");
-  ["dragenter", "dragover"].forEach(function (t) {
-    dz.addEventListener(t, function (ev) { ev.preventDefault(); dz.classList.add("over"); });
-  });
-  ["dragleave", "drop"].forEach(function (t) {
-    dz.addEventListener(t, function () { dz.classList.remove("over"); });
-  });
-  dz.addEventListener("drop", function (ev) {
-    ev.preventDefault();
-    var file = ev.dataTransfer && ev.dataTransfer.files[0];
-    if (file) readFile(file);
   });
 
   document.addEventListener("keydown", function (ev) {
@@ -704,20 +523,59 @@
     });
   }
 
-  /* výchozí sada z data-vlastni.js — jen při první návštěvě, flag v localStorage
-     zajišťuje, že ji smazání nevrátí zpět */
-  var seeded = DECKS.seed();
+  /* ---------- okruhy ----------
 
-  buildPickers();
-  renderHome();
-  renderDeckList();
-  if (seeded) {
-    say(
-      "Načtena výchozí sada: " + seeded.decks.length + " " +
-      plural(seeded.decks.length, "okruh", "okruhy", "okruhů") + ", " +
-      DECKS.count() + " slov.",
-      ""
-    );
+     Jediný zdroj slovíček je soubor okruhy/vychozi.txt v repu — hned se načte,
+     takže úprava souboru je vidět po obnovení stránky. Když stránka běží z
+     file://, prohlížeč fetch() na soubor nepustí, a tak se použije kopie
+     vložená do assets/data-vlastni.js (přegeneruje ji node tools/sync-defaults.js). */
+  var DEFAULTS_FILE = "okruhy/vychozi.txt";
+  var embedded = (window.SPANELSTINA || {}).defaultDecksText;
+
+  function showDecks(result, source) {
+    var decks = DECKS.practiceable();
+    var words = decks.reduce(function (n, d) { return n + d.words.length; }, 0);
+    var note = el("data-note");
+    note.className = "note";
+    note.textContent = "Okruhy z " + source + " · " + decks.length + " " +
+      plural(decks.length, "okruh", "okruhy", "okruhů") + ", " + words + " " +
+      plural(words, "slovo", "slova", "slov") + ".";
+    if (result.skipped.length) {
+      note.className = "note warn";
+      note.textContent += " " + skippedInfo(result.skipped);
+    }
+    forgetRegistry();
+    buildPickers();
+    renderHome();
   }
+
+  function loadDecks() {
+    fetch(DEFAULTS_FILE, { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.status);
+        return res.text();
+      })
+      .then(function (text) { showDecks(DECKS.set(text), DEFAULTS_FILE); })
+      .catch(function () {
+        if (!embedded) {
+          el("data-note").className = "note warn";
+          el("data-note").textContent =
+            "Nepodařilo se načíst " + DEFAULTS_FILE + " ani zabudovanou kopii v assets/data-vlastni.js.";
+          renderHome();
+          return;
+        }
+        showDecks(
+          DECKS.set(embedded),
+          "kopie v assets/data-vlastni.js (soubor se tu načíst nedá — otevři appku přes http)"
+        );
+      });
+  }
+
+  /* starší verze držela okruhy v localStorage; teď je jediným zdrojem .txt,
+     takže starou kopii radši smažeme, ať se nezasekává v prohlížeči */
+  try { localStorage.removeItem("spanelstina.decks.v1"); } catch (e) {}
+
   show("home");
+  renderHome();
+  loadDecks();
 })();

@@ -1,28 +1,18 @@
 #!/usr/bin/env node
-/* Test parseru vlastních okruhů: node tools/test-decks.js */
+/* Test čtení okruhů ze souboru: node tools/test-decks.js */
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-/* localStorage jako v prohlížeči, ať se dá otestovat i ukládání */
-function fakeStorage(initial) {
-  const data = Object.assign({}, initial);
-  return {
-    data,
-    getItem: (k) => (k in data ? data[k] : null),
-    setItem: (k, v) => { data[k] = String(v); },
-  };
-}
-
-function loadDECKS(storage, defaultText) {
-  const sandbox = { window: { SPANELSTINA: { defaultDecksText: defaultText } }, localStorage: storage };
+/* assets/decks.js jako v prohlížeči */
+function loadDECKS() {
+  const sandbox = { window: {} };
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "assets", "decks.js"), "utf8"), sandbox);
-  return { DECKS: sandbox.window.DECKS, sandbox };
+  return sandbox.window.DECKS;
 }
 
-const storage = fakeStorage();
-const { DECKS } = loadDECKS(storage);
+const DECKS = loadDECKS();
 
 let failed = 0;
 function is(label, actual, expected) {
@@ -48,7 +38,6 @@ is("rod los", DECKS.parse("TEMA 1 – Y\nlos gatos – kočky").decks[0].words[0
 is("bez článku", DECKS.parse("TEMA 1 – Y\nperro – pes").decks[0].words[0].g, "-");
 is("lomítka ve variantách", DECKS.parse("TEMA 1 – Y\nla estantería – polička / knihovna").decks[0].words[0].cs, "polička / knihovna");
 is("přeskočeno", r.skipped, []);
-is("round-trip počet slov", DECKS.parse(DECKS.serialize(r.decks)).decks.map((d) => d.words.length), [9, 13]);
 
 /* --- krajní případy --- */
 console.log("\nkrajní případy");
@@ -71,6 +60,7 @@ is("opakování stejného okruhu", DECKS.parse("TEMA 1 – Y\na – b\n\nTEMA 1 
 is("prázdný vstup", DECKS.parse("").decks.length, 0);
 is("nadpis bez slov zůstane", DECKS.parse("TEMA 1 – Y\n").decks.map((d) => d.words.length), [0]);
 is("nadpis bez slov se neprocvičuje", DECKS.parse("TEMA 1 – Y\n").decks[0].words.length === 0, true);
+is("diakritika v nadpisu", DECKS.parse("RŮŽE A BARVY – BARVY\nrojo – červená").decks[0].id, "U:ruze-a-barvy");
 
 /* --- poznámka k okruhu --- */
 console.log("\npoznámky");
@@ -78,14 +68,26 @@ const num = DECKS.parse("LOS NÚMEROS – ČÍSLA\nZopakujte si čísla 1–100,
 is("poznámka není slovíčko", num.decks[0].words.length, 0);
 is("poznámka je uložená", num.decks[0].note, "Zopakujte si čísla 1–100, včetně jejich zápisu slovy.");
 is("poznámka není chyba", num.skipped, []);
-is("poznámka přežije round-trip",
-  DECKS.parse(DECKS.serialize(num.decks)).decks[0].note,
-  "Zopakujte si čísla 1–100, včetně jejich zápisu slovy.");
 is("krátký řádek bez překladu je pořád chyba",
   DECKS.parse("TEMA 1 – Y\nel gato").skipped.map((s) => s.why),
   ["chybí překlad za –"]);
 
-/* --- výchozí sada a ukládání --- */
+/* --- DECKS.set: okruhy se jen čtou ze souboru, neukládají se --- */
+console.log("\nset()");
+is("před načtením nic", DECKS.all().length, 0);
+const set = DECKS.set(text);
+is("set vrací okruhy i chyby", [set.decks.length, set.skipped.length], [2, 0]);
+is("all() má co číst", DECKS.all().map((d) => d.id), ["U:los-animales", "U:la-casa"]);
+is("get() najde okruh", DECKS.get("U:la-casa").csName, "DŮM / BYDLENÍ");
+is("get() neznámé id vrátí null", DECKS.get("U:nic"), null);
+is("prázdný okruh se neprocvičuje", DECKS.practiceable().length, 2);
+DECKS.set("TEMA 1 – Y\n\nTEMA 2 – Z\na – b");
+is("set nahrazuje celý soubor", DECKS.all().length, 2);
+is("prázdný okruh se neprocvičuje", DECKS.practiceable().map((d) => d.id), ["U:tema-2"]);
+DECKS.set("");
+is("prázdný soubor = žádné okruhy", [DECKS.all().length, DECKS.practiceable().length], [0, 0]);
+
+/* --- výchozí sada --- */
 console.log("\nvýchozí sada");
 const defaults = fs.readFileSync(path.join(__dirname, "..", "assets", "data-vlastni.js"), "utf8");
 const sourceTxt = fs.readFileSync(path.join(__dirname, "..", "okruhy", "vychozi.txt"), "utf8");
@@ -96,29 +98,15 @@ const defaultText = (function () {
   return box.window.SPANELSTINA.defaultDecksText;
 })();
 /* pocity se odvodeji ze souboru, ne fixne — at si clovek muze vychozi sadu upravit */
-const parsedDefaults = DECKS.parse(sourceTxt);
+const parsedDefaults = DECKS.set(sourceTxt);
 const N_DECKS = parsedDefaults.decks.length;
 const N_WORDS = parsedDefaults.decks.reduce((n, d) => n + d.words.length, 0);
-const N_EMPTY = parsedDefaults.decks.filter((d) => !d.words.length).length;
 
 is("výchozí sada má aspoň 5 okruhů", N_DECKS >= 5, true);
 is("výchozí sada má slovíčka", N_WORDS >= 40, true);
-is("okruh ZVÍŘATA existuje", !!parsedDefaults.decks.find((d) => d.id === "U:los-animales"), true);
+is("okruh ZVÍŘATA existuje", !!DECKS.get("U:los-animales"), true);
+is("všechny okruhy se procvičují", DECKS.practiceable().length, N_DECKS);
 is("rozmezí 1–100 se nerozbije", DECKS.parse("TEMA 1 – Y\nPozor na čísla 1–100 a 2–3, tady.").decks[0].words.length, 0);
-
-const store2 = fakeStorage();
-const fresh = loadDECKS(store2, defaultText);
-const seeded = fresh.DECKS.seed();
-is("seed napoprvé okruh", seeded.decks.length, N_DECKS);
-is("seed napoprvé slov", fresh.DECKS.count(), N_WORDS);
-is("seed uloží do localStorage", JSON.parse(store2.data["spanelstina.decks.v1"]).seeded, true);
-is("seed podruhé nic", fresh.DECKS.seed(), null);
-fresh.DECKS.remove("U:los-animales");
-is("po smazání zůstalo", fresh.DECKS.all().length, N_DECKS - 1);
-is("smazání se po novém načtení nevrací", loadDECKS(store2, defaultText).DECKS.all().length, N_DECKS - 1);
-is("prázdný okruh se neprocvičuje", [fresh.DECKS.all().length, fresh.DECKS.practiceable().length], [N_DECKS - 1, N_DECKS - 1 - N_EMPTY]);
-is("starý tvar uložení se načte", loadDECKS(fakeStorage({ "spanelstina.decks.v1": '[{"id":"U:x","name":"X","words":[{"es":"a","cs":"b"}]}]' })).DECKS.all().length, 1);
-is("prázdné localStorage = žádné okruhy", loadDECKS(fakeStorage(), defaultText).DECKS.all().length, 0);
 
 /* --- data-vlastni.js musí být přesná kopie okruhy/vychozi.txt --- */
 console.log("\nsoulad souborů");
@@ -138,7 +126,6 @@ if (firstDiff) {
 }
 is("okruhy/vychozi.txt projde parserem bez chyb", DECKS.parse(sourceTxt).skipped, []);
 is("sync-defaults.js existuje", fs.existsSync(path.join(__dirname, "sync-defaults.js")), true);
-is("diakritika v nadpisu", DECKS.parse("RŮŽE A BARVY – BARVY\nrojo – červená").decks[0].id, "U:ruze-a-barvy");
 
 console.log(failed ? `\n${failed} testů selhalo` : "\nvšechny testy prošly ✓");
 process.exit(failed ? 1 : 0);

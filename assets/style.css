@@ -178,6 +178,8 @@ main {
 .mode-card[aria-checked="true"] span { color: inherit; }
 
 .note { color: var(--muted); font-size: .9rem; margin: -.5rem 0 1.5rem; }
+.note.loading { margin-top: -1rem; }
+.note.warn { color: var(--bad); }
 
 /* --- statistiky --- */
 .stats {
@@ -356,80 +358,3 @@ main {
   .card-inner { transition: none; }
   .progress-bar { transition: none; }
 }
-
-/* --- vlastní okruhy --- */
-.decks {
-  margin-top: 1.5rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-}
-.decks > summary {
-  cursor: pointer;
-  padding: .9rem 1rem;
-  font-size: .95rem;
-  list-style-position: inside;
-}
-.decks > summary:hover { color: var(--accent); }
-.decks-body { padding: 0 1rem 1rem; }
-
-.dropzone {
-  border: 1.5px dashed var(--line);
-  border-radius: 12px;
-  padding: 1rem;
-  text-align: center;
-  color: var(--muted);
-  transition: border-color .15s ease, background .15s ease;
-}
-.dropzone.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.dropzone p { margin: 0 0 .75rem; font-size: .9rem; }
-.dropzone code, .note code {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 0 .3rem;
-  font-size: .85em;
-}
-.dropzone .actions { justify-content: center; }
-
-.lbl { display: block; margin: 1rem 0 .4rem; font-size: .85rem; color: var(--muted); }
-textarea {
-  width: 100%;
-  padding: .7rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  color: var(--text);
-  font: .9rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  resize: vertical;
-}
-textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-#import-btn { margin-top: .5rem; }
-
-.deck-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .5rem;
-  padding: .7rem 0;
-  border-top: 1px solid var(--line);
-}
-.deck-name { flex: 1 1 12rem; font-size: .95rem; }
-.deck-name span { color: var(--muted); }
-.deck-count { display: block; font-size: .8rem; }
-.deck-note { color: var(--muted); font-style: italic; }
-.deck-btns { display: flex; gap: .35rem; flex-wrap: wrap; }
-.mini {
-  min-height: 2.25rem;
-  padding: .3rem .7rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--text);
-  font: inherit;
-  font-size: .85rem;
-  cursor: pointer;
-}
-.mini:hover { border-color: var(--muted); }
-.mini.danger { color: var(--bad); }
-.mini.danger:hover { border-color: var(--bad); }

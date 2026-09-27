@@ -29,6 +29,8 @@
       <div class="deck-picker" id="deck-picker" role="radiogroup" aria-label="Okruh"></div>
     </fieldset>
 
+    <p class="note loading" id="data-note" role="status" aria-live="polite">Načítám okruhy…</p>
+
     <fieldset class="group">
       <legend>Režim</legend>
       <div class="cards-2col" id="mode-picker" role="radiogroup" aria-label="Režim"></div>
@@ -48,38 +50,6 @@
       <button class="ghost-btn" id="reset-btn">Smazat postup</button>
     </div>
 
-    <details class="decks" id="decks-box">
-      <summary>Vlastní okruhy a slovíčka</summary>
-      <div class="decks-body">
-
-        <div class="dropzone" id="dropzone">
-          <p>Přetáhni sem soubor <code>.txt</code> s okruhy…</p>
-          <div class="actions">
-            <button class="ghost-btn" id="pick-btn" type="button">Vybrat soubor</button>
-            <button class="ghost-btn" id="export-btn" type="button" hidden>Stáhnout zpět</button>
-          </div>
-          <input type="file" id="file-input" accept=".txt,.csv,.md,text/plain" hidden>
-        </div>
-
-        <label class="lbl" for="paste-area">…nebo vlož text přímo:</label>
-        <textarea id="paste-area" rows="6" spellcheck="false" placeholder="LOS ANIMALES – ZVÍŘATA&#10;el perro – pes&#10;el gato – kočka"></textarea>
-        <div class="actions">
-          <button class="primary" id="import-btn" type="button">Přidat okruhy</button>
-          <button class="ghost-btn" id="reload-defaults" type="button">Načíst z okruhy/vychozi.txt</button>
-        </div>
-
-        <p class="feedback" id="decks-msg" role="status" aria-live="polite"></p>
-        <div id="decks-list"></div>
-
-        <p class="note">
-          Formát: nadpis okruhu velkými písmeny, pak slovíčka, oddělené en/em dashem
-          nebo <code> - </code>. Rod a příklad u slov se doplní podle článku
-          (<code>el</code>/<code>los</code> → rod mužský, <code>la</code>/<code>las</code> → ženský).
-          V jednom souboru může být víc okruhů. Okruhy se ukládají do prohlížeče,
-          takže je po importu hned v mřížce okruhů.
-        </p>
-      </div>
-    </details>
   </section>
 
   <!-- RELACE -->
