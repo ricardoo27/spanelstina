@@ -1,99 +1,87 @@
 #!/usr/bin/env node
-/* Kontrola slovníků: duplicity, chybějící pole, podezřelé znaky v příkladech. */
+/* Kontrola výchozí sady v okruhy/vychozi.txt: duplicity, shoda názvů,
+   divné znaky a chyby, které by nešlo opravit ručně v prohlížeči.
+   Parser je stejný jako v prohlížeči (assets/decks.js), takže co projde tady,
+   to se načte i v aplikaci. */
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
-const dir = path.join(__dirname, "..", "assets");
-const files = fs.readdirSync(dir).filter((f) => /^data-.*\.js$/.test(f));
+const root = path.join(__dirname, "..");
+const text = fs.readFileSync(path.join(root, "okruhy", "vychozi.txt"), "utf8");
 
-const sandbox = { window: {} };
-for (const f of files) {
-  const code = fs.readFileSync(path.join(dir, f), "utf8");
-  new Function("window", code)(sandbox.window);
-}
+const store = {};
+const sandbox = { window: { localStorage: {
+  getItem: (k) => (k in store ? store[k] : null),
+  setItem: (k, v) => { store[k] = String(v); }
+} } };
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(root, "assets", "decks.js"), "utf8"), sandbox);
+const DECKS = sandbox.window.DECKS;
 
-const levels = sandbox.window.SPANELSTINA.levels;
 const problems = [];
 
-/* znaky, které se ve španělské větě vyskytují nesmějí */
-const OK_EX = "áéíóúüñÁÉÍÓÚÜÑ¿¡(),.;:!?—–/\"' 0-9%";
+/* shoda bez diakritiky a bez článků — "El Perro" a "el perro" jsou duplicitní */
+const norm = (s) => String(s)
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[̀-ͯ]/g, "")
+  .replace(/[^a-z0-9ñ\s]/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
 
-const strip = (s) =>
-  s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9ñ\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+/* znaky, které se ve španělském hesle vyskytují nesmějí */
+const OK_ES = "áéíóúüñÁÉÍÓÚÜÑ¿¡(),.;:!?—–/\"' 0-9%";
+const OK_CS = "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ()–—.,!?/\"' 0-9%";
 
-/* sloveso má ve větě jinou podobu (bebo, tengo, haré…), takže stačí
-   společná začáteční písmena; číslovky a výrazy kontrolujeme jinak */
-const hasStem = (exWords, key) => {
-  const k = strip(key);
-  if (k.length < 4) return true;
-  return exWords.some(
-    (w) =>
-      w === k ||
-      (w.length >= 4 && k.length >= 4 && (w.startsWith(k.slice(0, 4)) || k.startsWith(w.slice(0, 4))))
-  );
-};
+const { decks, skipped } = DECKS.parse(text);
+skipped.forEach((s) => problems.push(`řádek ${s.line}: přeskočen (${s.why}) — ${s.text.trim()}`));
 
-/* nepravidelná slovesa — infinitiv se ve větě objeví ve změněné podobě */
-const IRREGULAR = new Set([
-  "ser", "estar", "tener", "hacer", "decir", "poder", "querer", "salir", "volver",
-  "dormir", "doler", "deber", "leer", "mirar", "entender", "seguir", "impedir",
-  "sugerir", "beber", "negar", "acordarse de", "dejar de", "malo"
-]);
+/* dva okruhy se stejným normalizovaným názvem by se sloučily do jednoho id */
+const byId = new Map();
+decks.forEach((d) => {
+  const prev = byId.get(d.id);
+  if (prev) problems.push(`„${d.name}“ má stejné ID jako „${prev.name}“ (${d.id}) — sloučily by se`);
+  else byId.set(d.id, d);
+});
 
-for (const [level, entries] of Object.entries(levels)) {
-  const seen = new Map();
-  entries.forEach((e, i) => {
-    const at = `${level}[${i}]`;
+decks.forEach((d) => {
+  const at = d.name;
+  if (!d.words.length) problems.push(`${at}: okruh bez slovíček — nebude se dá procvičit`);
 
-    for (const key of ["es", "cs", "g", "pos", "ex"]) {
-      if (!e[key] || typeof e[key] !== "string") problems.push(`${at}: chybí/neplatné pole "${key}"`);
-    }
-    if (!["m", "f", "-"].includes(e.g)) problems.push(`${at}: špatný rod "${e.g}"`);
-    if (!["n", "v", "adj", "adv", "expr", "num"].includes(e.pos))
-      problems.push(`${at}: špatný slovní druh "${e.pos}"`);
+  const seenEs = new Map();
+  const seenCs = new Map();
+  d.words.forEach((w) => {
+    const es = w.es, cs = w.cs;
+    const kEs = norm(es), kCs = norm(cs);
 
-    /* duplicity v rámci úrovně */
-    const key = strip(e.es);
-    if (seen.has(key)) problems.push(`${at}: duplicita "${e.es}" (také ${seen.get(key)})`);
-    else seen.set(key, at);
+    if (!kEs || !kCs) problems.push(`${at}: prázdné heslo nebo překlad`);
+    if (seenEs.has(kEs)) problems.push(`${at}: duplicitní heslo „${es}“ (také ${seenEs.get(kEs)})`);
+    else seenEs.set(kEs, es);
+    if (seenCs.has(kCs)) problems.push(`${at}: duplicitní překlad „${cs}“ (také ${seenCs.get(kCs)})`);
+    else seenCs.set(kCs, cs);
 
-    /* shoda rodu: sloveso/přídavné/příslovce bez rodu, podstatné s rodem */
-    if (e.pos === "n" && e.g === "-") problems.push(`${at}: podstatné jméno "${e.es}" bez rodu`);
-    if (["v", "adj", "adv", "num"].includes(e.pos) && e.g !== "-")
-      problems.push(`${at}: "${e.pos}" má rod "${e.g}"`);
+    if (kEs && kEs === kCs) problems.push(`${at}: heslo a překlad jsou stejné: „${es}“`);
 
-    /* podezřelé znaky v příkladu */
-    for (const ch of e.ex || "") {
-      if (!OK_EX.includes(ch) && !/[a-zA-ZñÑ]/.test(ch)) {
-        problems.push(`${at}: divný znak "${ch}" v příkladu: ${e.ex}`);
+    for (const ch of es) {
+      if (!OK_ES.includes(ch) && !/[a-zA-ZñÑ]/.test(ch)) {
+        problems.push(`${at}: divný znak „${ch}“ v hesle „${es}“`);
         break;
       }
     }
-    if (/[぀-ヿ一-鿿가-힯]/.test(e.ex || "") || /[぀-ヿ一-鿿가-힯]/.test(e.es || "")) {
-      problems.push(`${at}: asijské znaky v záznamu: ${e.es}`);
-    }
-
-    /* příklad by měl obsahovat heslo (bez článců) */
-    const exWords = strip(e.ex).split(" ");
-    const keyWords = strip(e.es)
-      .split(" ")
-      .filter((w) => !["el", "la", "los", "las", "un", "una", "de", "a", "y", "en"].includes(w));
-    if (keyWords.length && !keyWords.some((w) => hasStem(exWords, w)) && !IRREGULAR.has(key)) {
-      problems.push(`${at}: příklad neobsahuje heslo "${e.es}" → ${e.ex}`);
+    for (const ch of cs) {
+      if (!OK_CS.includes(ch) && !/[a-zA-Zà-ž]/.test(ch)) {
+        problems.push(`${at}: divný znak „${ch}“ v překladu „${cs}“`);
+        break;
+      }
     }
   });
 
-  console.log(`${level}: ${entries.length} záznamů`);
-}
+  console.log(`${d.csName || d.name}: ${d.words.length} slov`);
+});
 
-const total = Object.values(levels).reduce((n, e) => n + e.length, 0);
-console.log(`celkem: ${total}`);
+const total = decks.reduce((n, d) => n + d.words.length, 0);
+console.log(`celkem: ${decks.length} okruhů, ${total} slov`);
 
 if (problems.length) {
   console.log(`\n${problems.length} problémů:`);

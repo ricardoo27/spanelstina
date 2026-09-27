@@ -3,12 +3,13 @@
 Aplikace na učení španělských slovíček. Statický HTML/JavaScript, žádné buildování,
 žádné závislosti. Hodí se na GitHub Pages i na otevření lokálně (`file://`).
 
-- **490 slovíček** ve třech úrovních: A1 (165), A2 (150), B1 (175)
-- **výchozí sada** v `okruhy/vychozi.txt` (9 okruhů / 181 slovíček: zvířata, dům,
-  zájmy, tělo, dny, měsíce, barvy, **čísla 1–100**, jídlo) — načte se sama při
-  první návštěvě
-- **vlastní okruhy** importem ze souboru `.txt` nebo vložením textu
-- režim **Vlastní** = procvičit jen okruhy z importu, bez A1/A2/B1
+- **výchozí sada 181 slovíček v 9 okruzích** z `okruhy/vychozi.txt` — zvířata,
+  dům / bydlení, zájmy, tělo, dny v týdnu, měsíce, barvy, **čísla 1–100**, jídlo.
+  Načte se sama při první návštěvě, dá se upravovat v tomhle souboru
+- **vlastní okruhy** importem ze souboru `.txt` nebo vložením textu; okruh se
+  pozná podle názvu, takže import stejného okruhu slovíčka přepíše
+- **výběr okruhu** — každý tematický okruh se dá procvičit sám, nebo všechny
+  dohromady
 - tři režimy: **flashcardy** (otáčení), **výběr z možností** (česky → španělsky)
   a **psaní** (španělsky → česky, překlad napíšeš sám)
 - plánování opakování (SM-2), karty se vrací ve vhodných intervalech
@@ -30,12 +31,15 @@ pomlčkami v názvu repozitáře rozbila cesta ke skriptům).
 
 ## Jak se procvičuje
 
-Na úvodní obrazovce vybereš **úroveň** (A1, A2, B1, jeden z vlastních okruhů,
-**Vlastní** = jen importované, nebo **Mix** = všechno dohromady), **režim** a kolik
-**nových karet** chceš v jedné relaci. Tlačítko *Začít* vypíše, kolik karet tě čeká.
+Na úvodní obrazovce vybereš **okruh** — mřížka karet, kde je každý okruh volitelný
+sám o sobě (Zvířata, Čísla, Barvy, …) a nahoře zkratka **Všecko dohromady**, která
+sáhne do všech okruhů najednou. Pak **režim** a kolik **nových karet** chceš v jedné
+relaci. Tlačítko *Začít* vypíše, kolik karet tě čeká.
 
-Rozhodnutí, jestli karta přijde z A1, nebo z okruhu, se drží u karty, ne u režimu:
-karta procvičená přes *Vlastní* má stejný rozvrh jako procvičená přes konkrétní okruh.
+Rozhodnutí, odkud karta přišla, se drží u karty, ne u volby na úvodní obrazovce:
+karta procvičená přes *Všecko dohromady* má stejný rozvrh jako procvičená přes konkrétní
+okruh. Takže to, že jsi Zvířata jednou projel v mixu, ti nezkazí, až je vyberem
+samostatně.
 
 Relace bere nejdřív karty, které se mají opakovat, a doplní je novými. Karta,
 kterou neznáš, se objeví znovu na konci relace.
@@ -159,40 +163,40 @@ Pravidla:
   okruhu, ale jeho rozvržené opakování zůstane zachované
 - duplicitní slovíčko v jednom okruhu se přeskočí a appka to napíše
 
-Importované okruhy se ukládají do prohlížeče a objeví se v seznamu úrovní vedle
-A1 / A2 / B1 / Mix — každý se dá rovnou **Procvičit**, **Stáhnout** (zpět do `.txt`
+Importované okruhy se ukládají do prohlížeče a objeví se v mřížce okruhů —
+každý se dá rovnou **Procvičit**, **Stáhnout** (zpět do `.txt`
 ve stejném formátu) nebo **Smazat**. Protože jde o data v prohlížeči, po přesunu
 na jiné zařízení je potřeba okruhy naimportovat znovu — proto ta možnost stáhnutí.
 
 Vzorový soubor k testování je `tools/sample-okruhy.txt`.
 
-## Přidávání slovíček do vestavěných úrovní
+## Přidávání slovíček
 
-Slovíčka jsou v `assets/data-a1.js`, `data-a2.js`, `data-b1.js`. Každý řádek:
+Slovíčka nejsou zapsaná v kódu, ale v `okruhy/vychozi.txt` — stejný formát jako
+import. Stačí přidat řádek, uložit a v aplikaci kliknout na *Načíst z
+okruhy/vychozi.txt* (přes `file://` to nefunguje, tam slovíčka přilož přes drag
+& drop nebo sem vlož).
 
-```js
-{ es: "el imperfecto", cs: "rozuměl jsem", g: "m", pos: "n", ex: "Hablaba español de niño." }
+```txt
+LOS ANIMALES – ZVÍŘATA
+el perro – pes
+la abeja – včela
 ```
 
-- `es` — španělsky, ideálně s článkem a diakritikou
-- `cs` — česky
-- `g` — rod: `"m"` (el), `"f"` (la), `"-"` (slovesa, přídavná, výrazy, číslovky)
-- `pos` — slovní druh: `"n"` podstatné jméno, `"v"` sloveso, `"adj"` přídavné,
-  `"adv"` příslovce, `"expr"` výraz, `"num"` číslovka
-- `ex` — krátká španělská věta, ve které je to slovo použité
+Nový okruh vznikne novým nadpisem psaným velkými písmeny. Soubor `okruhy/vychozi.txt`
+je zároveň to, co si aplikace načte poprvé, takže editace funguje i bez serveru:
+`assets/data-vlastni.js` je jen jeho automatická kopie pro offline běh a přegeneruje
+se skriptem `node tools/sync-defaults.js`.
 
-Heslo se v relaci ukazuje jako klíč `ÚROVEŇ|es`, takže po přejmenování slovíčka
-se jeho historie ztratí a karta se začne znovu.
-
-Nová úroveň: zkopíruj `assets/data-a1.js` na `assets/data-b2.js`, přejmenuj
-`window.SPANELSTINA.levels.A1` na `B2` a přidej `<script>` do `index.html`.
+Heslo se v relaci ukazuje jako klíč `ID_OKRUHU|es` (např. `U:los-animales|el perro`),
+takže po přejmenování slovíčka se jeho historie ztratí a karta se začne znovu.
 
 ## Kontrola (jen pro vývoj, potřebuje Node)
 
 Stránka sama Node nepotřebuje, ale v repozitáři jsou dva kontrolní skripty:
 
 ```sh
-node tools/check.js          # slovníčko: duplicity, rod, slovní druh, divné znaky
+node tools/check.js          # výchozí sada: duplicity, prázdné okruhy, divné znaky
 node tools/test-decks.js     # parser okruhů, poznámky, ukládání, soulad souborů
 node tools/sync-defaults.js  # okruhy/vychozi.txt -> assets/data-vlastni.js
 ```

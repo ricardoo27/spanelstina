@@ -2,7 +2,6 @@
 (function () {
   "use strict";
 
-  var LEVELS = window.SPANELSTINA.levels;
   var LIMITS = [10, 20, 30, 50];
   var MODES = {
     flash: { title: "Flashcardy", desc: "Otoč kartu a ohodť se", dir: "es2cs" },
@@ -13,23 +12,18 @@
   var el = function (id) { return document.getElementById(id); };
   var screens = { home: el("screen-home"), session: el("screen-session"), summary: el("screen-summary") };
 
-  var sel = { level: "A1", mode: "flash", limit: 20 };
+  var sel = { deck: "MIX", mode: "flash", limit: 20 };
   var session = null;
   var MAX_SESSION = 40;   /* delší relace už nikomu nepomůže */
 
   /* ---------- data ---------- */
 
-  var VLASTNI = "U:*";   /* jen okruhy z vlastního importu, bez A1/A2/B1 */
-
-  /* vestavěné úrovně + importované okruhy, sjednoceně do jednoho registru */
+  /* okruhy (výchozí sada i importované), sjednoceně do jednoho registru */
   var REG = null;
 
   function registry() {
     if (REG) return REG;
     var reg = {};
-    Object.keys(LEVELS).forEach(function (k) {
-      reg[k] = LEVELS[k].map(function (e) { return entry(e, k); });
-    });
     DECKS.practiceable().forEach(function (d) {
       reg[d.id] = d.words.map(function (w) { return entry(w, d.id); });
     });
@@ -37,31 +31,26 @@
     return reg;
   }
 
-  function entry(e, level) {
-    return { es: e.es, cs: e.cs, g: e.g, pos: e.pos, ex: e.ex || "", level: level };
+  function entry(e, deck) {
+    return { es: e.es, cs: e.cs, g: e.g, pos: e.pos, ex: e.ex || "", deck: deck };
   }
 
   function forgetRegistry() { REG = null; }
 
   function labelFor(id) {
-    if (id === "MIX") return "Mix";
-    if (id === VLASTNI) return "Vlastní";
-    if (LEVELS[id]) return id;
+    if (id === "MIX") return "Všecko dohromady";
     var d = DECKS.get(id);
     return d ? d.csName || d.name : id;
   }
 
-  /* seznam slov pro úroveň
-     MIX    = všechno dohromady
-     VLASTNI = jen importované okruhy (karty si nesou id vlastního okruhu, takže
-              opakování se sdílí s procvičováním konkrétního okruhu) */
-  function pool(level) {
+  /* seznam slov pro okruh; MIX = všechny okruhy dohromady. Karty si nesou id
+     okruhu, takže se rozvrh sdílí s procvičováním konkrétního okruhu. */
+  function pool(id) {
     var reg = registry();
-    if (level === "MIX" || level === VLASTNI) {
-      return Object.keys(reg).filter(function (k) { return level === "MIX" || !LEVELS[k]; })
-        .reduce(function (a, k) { return a.concat(reg[k]); }, []);
+    if (id === "MIX") {
+      return Object.keys(reg).reduce(function (a, k) { return a.concat(reg[k]); }, []);
     }
-    return reg[level] || [];
+    return reg[id] || [];
   }
 
   function shuffle(arr) {
@@ -73,7 +62,7 @@
     return a;
   }
 
-  function idOf(e) { return e.level + "|" + e.es; }
+  function idOf(e) { return e.deck + "|" + e.es; }
 
   /* 1 řádek / 3 řádky / 5 řádků */
   function plural(n, one, few, many) { return n === 1 ? one : n < 5 ? few : many; }
@@ -100,30 +89,40 @@
 
   /* ---------- úvodní obrazovka ---------- */
 
-  function buildPickers() {
-    var reg = registry();
-    var lc = el("level-chips");
-    lc.innerHTML = "";
-    var ids = Object.keys(reg);
-    if (sel.level !== "MIX" && sel.level !== VLASTNI && ids.indexOf(sel.level) < 0) sel.level = "A1";
+  /* pod titulem u celé skupiny: "9 okruhů · 181 slov", u jednoho okruhu počet slov */
+  function deckSub(id) {
+    var n = pool(id).length;
+    if (id !== "MIX") return n + " " + plural(n, "slovo", "slova", "slov");
+    var count = Object.keys(registry()).length;
+    return count + " " + plural(count, "okruh", "okruhy", "okruhů") + " · " + n + " slov";
+  }
 
-    /* "Vlastní" = jen importované okruhy, "Mix" = úrovně i vlastní dohromady.
-     * Oba jsou výběr nad celým registrem, takže do jejich součtu se nepočítají. */
+  /* výběr okruhu — mřížka karet. Každý okruh je volitelný sám o sobě,
+     "Všecko dohromady" a "Jen moje okruhy" jsou zkratky nad celým registrem. */
+  function buildDeckPicker() {
+    var reg = registry();
+    var box = el("deck-picker");
+    box.innerHTML = "";
+    var ids = Object.keys(reg);
+    if (ids.indexOf(sel.deck) < 0) sel.deck = ids.length > 1 ? "MIX" : ids[0] || "MIX";
+
     var list = ids.slice();
-    if (DECKS.practiceable().length) list.push(VLASTNI);
-    if (ids.length > 1) list.push("MIX");
+    if (ids.length > 1) list.unshift("MIX");
 
     list.forEach(function (k) {
-      var n = pool(k).length;
       var b = document.createElement("button");
-      b.className = "chip";
+      b.className = "deck-card" + (k === "MIX" ? " all" : "");
       b.type = "button";
       b.setAttribute("role", "radio");
-      b.setAttribute("aria-checked", String(sel.level === k));
-      b.innerHTML = esc(labelFor(k)) + '<span class="sub">' + n + " slov</span>";
-      b.addEventListener("click", function () { sel.level = k; buildPickers(); renderHome(); });
-      lc.appendChild(b);
+      b.setAttribute("aria-checked", String(sel.deck === k));
+      b.innerHTML = "<b>" + esc(labelFor(k)) + "</b><span>" + esc(deckSub(k)) + "</span>";
+      b.addEventListener("click", function () { sel.deck = k; buildPickers(); renderHome(); });
+      box.appendChild(b);
     });
+  }
+
+  function buildPickers() {
+    buildDeckPicker();
 
     var mc = el("mode-picker");
     mc.innerHTML = "";
@@ -153,7 +152,7 @@
   }
 
   function renderHome() {
-    var entries = pool(sel.level);
+    var entries = pool(sel.deck);
     var p = plan(entries);
     var s = SRS.stats(entries);
     var total = p.due.length + p.fresh.length;
@@ -207,10 +206,10 @@
   }
 
   function start() {
-    var entries = pool(sel.level);
+    var entries = pool(sel.deck);
     var p = plan(entries);
     session = {
-      level: sel.level,
+      deck: sel.deck,
       mode: sel.mode,
       review: [],
       todo: p.due.concat(p.fresh),
@@ -257,8 +256,8 @@
     var e = session.current;
     var c = el("card");
     c.classList.remove("flipped");
-    el("fc-badge").textContent = labelFor(e.level);
-    el("fc-badge-back").textContent = labelFor(e.level);
+    el("fc-badge").textContent = labelFor(e.deck);
+    el("fc-badge-back").textContent = labelFor(e.deck);
     el("fc-word").textContent = e.es;
     el("fc-cs").textContent = e.cs;
     el("fc-ex").textContent = e.ex || "";
@@ -360,9 +359,9 @@
       (askEs ? "Přelož do češtiny:" : "Jak se řekne česky?") +
       '<span class="word">' + (askEs ? esc(e.es) : esc(e.cs)) + "</span>";
 
-    /* 3 nesprávné možnosti ze stejné úrovně, s podobným slovním druhem */
-    var sameKind = pool(session.level).filter(function (x) { return x.pos === e.pos; });
-    var any = pool(session.level);
+    /* 3 nesprávné možnosti ze stejného okruhu, s podobným slovním druhem */
+    var sameKind = pool(session.deck).filter(function (x) { return x.pos === e.pos; });
+    var any = pool(session.deck);
     var answerText = askEs ? e.cs : e.es;
     var wrong = pickWrong(answerText, sameKind.length >= 3 ? sameKind : any, askEs);
     if (wrong.length < 3) {
@@ -455,7 +454,7 @@
 
     DECKS.importAll(r.decks);
     forgetRegistry();
-    sel.level = r.decks[0].id;   /* rovnou se podívej na první nový okruh */
+    sel.deck = r.decks[0].id;   /* rovnou se podívej na první nový okruh */
     buildPickers();
     renderHome();
     renderDeckList();
@@ -550,7 +549,7 @@
       btns.className = "deck-btns";
       if (d.words.length) {
         btns.appendChild(miniBtn("Procvičit", function () {
-          sel.level = d.id;
+          sel.deck = d.id;
           buildPickers();
           renderHome();
           el("decks-box").open = false;

@@ -1,5 +1,5 @@
 /* Španelština — ukládání postupu a plánování opakování (SM-2 lite)
-   Klíč karty: "ÚROVEŇ|španělské heslo", aby se progress držel zvlášť pro každou úroveň. */
+   Klíč karty: "ID_OKRUHU|španělské heslo", aby se progress držel zvlášť pro každý okruh. */
 (function () {
   "use strict";
 
@@ -92,7 +92,7 @@
     var due = [];
     var fresh = [];
     entries.forEach(function (e) {
-      var id = e.level + "|" + e.es;
+      var id = e.deck + "|" + e.es;
       var c = get(id);
       if (!c) {
         fresh.push(e);
@@ -101,7 +101,7 @@
       }
     });
     due.sort(function (a, b) {
-      return get(a.level + "|" + a.es).due - get(b.level + "|" + b.es).due;
+      return get(a.deck + "|" + a.es).due - get(b.level + "|" + b.es).due;
     });
     return { due: due, fresh: fresh };
   }
@@ -113,7 +113,7 @@
     var known = 0;
     var seen = 0;
     entries.forEach(function (e) {
-      var c = get(e.level + "|" + e.es);
+      var c = get(e.deck + "|" + e.es);
       if (!c) return;
       seen++;
       if (c.due <= t) due++;

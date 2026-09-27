@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Španelština – procvičování slovíčka</title>
-<meta name="description" content="Procvičování španělských slovíček na úrovních A1, A2 a B1. Flashcardy a výběr z možností, postup se ukládá v prohlížeči.">
+<meta name="description" content="Procvičování španělských slovíček po tematických okruzích. Flashcardy, výběr z možností i psaní, postup se ukládá v prohlížeči.">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#1b1521">
 <link rel="stylesheet" href="assets/style.css">
@@ -25,8 +25,8 @@
     <h2 class="lede">Kolik slovíček dnes?</h2>
 
     <fieldset class="group">
-      <legend>Úroveň</legend>
-      <div class="chips" id="level-chips" role="radiogroup" aria-label="Úroveň"></div>
+      <legend>Co procvičit</legend>
+      <div class="deck-picker" id="deck-picker" role="radiogroup" aria-label="Okruh"></div>
     </fieldset>
 
     <fieldset class="group">
@@ -76,7 +76,7 @@
           nebo <code> - </code>. Rod a příklad u slov se doplní podle článku
           (<code>el</code>/<code>los</code> → rod mužský, <code>la</code>/<code>las</code> → ženský).
           V jednom souboru může být víc okruhů. Okruhy se ukládají do prohlížeče,
-          takže je po importu vidět i mezi úrovněmi A1 / A2 / B1 / Mix.
+          takže je po importu hned v mřížce okruhů.
         </p>
       </div>
     </details>
@@ -147,9 +147,6 @@
   <p>Postup se ukládá jen do tohoto prohlížeče (localStorage).</p>
 </footer>
 
-<script src="assets/data-a1.js"></script>
-<script src="assets/data-a2.js"></script>
-<script src="assets/data-b1.js"></script>
 <script src="assets/data-vlastni.js"></script>
 <script src="assets/decks.js"></script>
 <script src="assets/srs.js"></script>
