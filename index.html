@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Španelština – procvičování slovíčka</title>
+<meta name="description" content="Procvičování španělských slovíček na úrovních A1, A2 a B1. Flashcardy a výběr z možností, postup se ukládá v prohlížeči.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1b1521">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🇪🇸</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <button id="back-btn" class="ghost-btn" hidden aria-label="Zpět na úvod">←</button>
+  <h1>Španelština</h1>
+  <div class="streak" id="streak" title="Počet dní po sobě, kdy jsi cvičil(a)" hidden></div>
+</header>
+
+<main>
+
+  <!-- ÚVOD -->
+  <section id="screen-home" class="screen">
+    <h2 class="lede">Kolik slovíček dnes?</h2>
+
+    <fieldset class="group">
+      <legend>Úroveň</legend>
+      <div class="chips" id="level-chips" role="radiogroup" aria-label="Úroveň"></div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>Režim</legend>
+      <div class="cards-2col" id="mode-picker" role="radiogroup" aria-label="Režim"></div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>Nové karty v této relaci</legend>
+      <div class="chips" id="limit-chips" role="radiogroup" aria-label="Počet nových karet"></div>
+    </fieldset>
+
+    <p class="note" id="queue-note"></p>
+
+    <div class="stats" id="home-stats"></div>
+
+    <div class="actions">
+      <button class="primary" id="start-btn">Začít</button>
+      <button class="ghost-btn" id="reset-btn">Smazat postup</button>
+    </div>
+
+    <details class="decks" id="decks-box">
+      <summary>Vlastní okruhy a slovíčka</summary>
+      <div class="decks-body">
+
+        <div class="dropzone" id="dropzone">
+          <p>Přetáhni sem soubor <code>.txt</code> s okruhy…</p>
+          <div class="actions">
+            <button class="ghost-btn" id="pick-btn" type="button">Vybrat soubor</button>
+            <button class="ghost-btn" id="export-btn" type="button" hidden>Stáhnout zpět</button>
+          </div>
+          <input type="file" id="file-input" accept=".txt,.csv,.md,text/plain" hidden>
+        </div>
+
+        <label class="lbl" for="paste-area">…nebo vlož text přímo:</label>
+        <textarea id="paste-area" rows="6" spellcheck="false" placeholder="LOS ANIMALES – ZVÍŘATA&#10;el perro – pes&#10;el gato – kočka"></textarea>
+        <button class="primary" id="import-btn" type="button">Přidat okruhy</button>
+
+        <p class="feedback" id="decks-msg" role="status" aria-live="polite"></p>
+        <div id="decks-list"></div>
+
+        <p class="note">
+          Formát: nadpis okruhu velkými písmeny, pak slovíčka, oddělené en/em dashem
+          nebo <code> - </code>. Rod a příklad u slov se doplní podle článku
+          (<code>el</code>/<code>los</code> → rod mužský, <code>la</code>/<code>las</code> → ženský).
+          V jednom souboru může být víc okruhů. Okruhy se ukládají do prohlížeče,
+          takže je po importu vidět i mezi úrovněmi A1 / A2 / B1 / Mix.
+        </p>
+      </div>
+    </details>
+  </section>
+
+  <!-- RELACE -->
+  <section id="screen-session" class="screen" hidden>
+    <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
+    <p class="progress-text" id="progress-text"></p>
+
+    <!-- flashcard -->
+    <div id="card-view">
+      <div class="card" id="card" tabindex="0" role="button" aria-label="Karta, klikni nebo stiskni mezeru pro otočení">
+        <div class="card-inner">
+          <div class="face front">
+            <span class="badge" id="fc-badge"></span>
+            <p class="word" id="fc-word"></p>
+            <p class="hint">klikni / mezerník — překlad</p>
+          </div>
+          <div class="face back">
+            <span class="badge" id="fc-badge-back"></span>
+            <p class="cs" id="fc-cs"></p>
+            <p class="example" id="fc-ex"></p>
+          </div>
+        </div>
+      </div>
+      <div class="grades" id="grades" hidden>
+        <button data-q="0" class="grade bad">Nevím <kbd>1</kbd></button>
+        <button data-q="1" class="grade mid">Složité <kbd>2</kbd></button>
+        <button data-q="2" class="grade good">Jisté <kbd>3</kbd></button>
+      </div>
+    </div>
+
+    <!-- multiple choice -->
+    <div id="mc-view" hidden>
+      <p class="prompt" id="mc-prompt"></p>
+      <div class="options" id="mc-options"></div>
+      <p class="feedback" id="mc-feedback" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="type-view" hidden>
+      <p class="prompt" id="type-prompt"></p>
+      <div class="type-row">
+        <input id="type-input" type="text" autocomplete="off" autocapitalize="off"
+               autocorrect="off" spellcheck="false" enterkeyhint="go"
+               aria-label="Tvoje odpověď" placeholder="napiš překlad…">
+        <button class="primary" id="type-btn" type="button">Zkontrolovat</button>
+      </div>
+      <p class="feedback" id="type-feedback" role="status" aria-live="polite"></p>
+      <p class="hint" id="type-hint">Enter = zkontrolovat · diakritika nejsou potřeba, lomítko beru jako „nebo“</p>
+    </div>
+  </section>
+
+  <!-- SHRNUTÍ -->
+  <section id="screen-summary" class="screen" hidden>
+    <h2 id="sum-title">Hotovo!</h2>
+    <div class="stats" id="sum-stats"></div>
+    <p class="feedback" id="sum-note"></p>
+    <div class="actions">
+      <button class="primary" id="again-btn">Další kolo</button>
+      <button class="ghost-btn" id="home-btn">Na úvod</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>Postup se ukládá jen do tohoto prohlížeče (localStorage).</p>
+</footer>
+
+<script src="assets/data-a1.js"></script>
+<script src="assets/data-a2.js"></script>
+<script src="assets/data-b1.js"></script>
+<script src="assets/data-vlastni.js"></script>
+<script src="assets/decks.js"></script>
+<script src="assets/srs.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
