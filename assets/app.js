@@ -467,6 +467,42 @@
     say(msg, "right");
   }
 
+  var DEFAULTS_FILE = "okruhy/vychozi.txt";
+
+  /* načte výchozí sadu přímo ze souboru v repu — když ji člověk upravil
+     a chce ji mít v prohlížeči */
+  function loadDefaultsFile() {
+    fetch(DEFAULTS_FILE, { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        var r = DECKS.parse(text);
+        if (!r.decks.length) {
+          say("V " + DEFAULTS_FILE + " nejsou žádná slovíčka.", "wrong");
+          return;
+        }
+        DECKS.importAll(r.decks);
+        forgetRegistry();
+        buildPickers();
+        renderHome();
+        renderDeckList();
+        var words = r.decks.reduce(function (n, d) { return n + d.words.length; }, 0);
+        var msg = "Načteno z " + DEFAULTS_FILE + ": " + r.decks.length + " " +
+          plural(r.decks.length, "okruh", "okruhy", "okruhů") + ", " + words + " " +
+          plural(words, "slovo", "slova", "slov") + ".";
+        if (r.skipped.length) msg += " " + skippedInfo(r.skipped);
+        say(msg, r.skipped.length ? "" : "right");
+      })
+      .catch(function () {
+        say(
+          "Soubor " + DEFAULTS_FILE + " nejde přes tuto stránku načíst. Otevři appku přes http (např. na GitHub Pages) nebo soubor rovnou přetáhni do zóny nahoře.",
+          "wrong"
+        );
+      });
+  }
+
   function readFile(file) {
     if (!file) return;
     var fr = new FileReader();
@@ -589,6 +625,7 @@
     importText(text);
     el("paste-area").value = "";
   });
+  el("reload-defaults").addEventListener("click", loadDefaultsFile);
   el("export-btn").addEventListener("click", function () {
     download(DECKS.serialize(DECKS.all()), "spanelstina-okruhy.txt");
   });

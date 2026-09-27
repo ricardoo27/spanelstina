@@ -4,8 +4,9 @@ Aplikace na učení španělských slovíček. Statický HTML/JavaScript, žádn
 žádné závislosti. Hodí se na GitHub Pages i na otevření lokálně (`file://`).
 
 - **490 slovíček** ve třech úrovních: A1 (165), A2 (150), B1 (175)
-- **výchozí sada 9 okruhů / 81 slovíček** (zvířata, dům, zájmy, tělo, dny, měsíce,
-  barvy, jídlo) — načte se sama při první návštěvě
+- **výchozí sada** v `okruhy/vychozi.txt` (9 okruhů / 181 slovíček: zvířata, dům,
+  zájmy, tělo, dny, měsíce, barvy, **čísla 1–100**, jídlo) — načte se sama při
+  první návštěvě
 - **vlastní okruhy** importem ze souboru `.txt` nebo vložením textu
 - režim **Vlastní** = procvičit jen okruhy z importu, bez A1/A2/B1
 - tři režimy: **flashcardy** (otáčení), **výběr z možností** (česky → španělsky)
@@ -81,16 +82,45 @@ V režimu výběru z možností rozhoduje správnost, vlastní ohodnocení nepot
 
 ## Výchozí sada
 
-Při první návštěvě se do prohlížeče načtou okruhy z `assets/data-vlastni.js`
-(zvířata, dům, zájmy, tělo, dny v týdně, měsíce, barvy, čísla, jídlo — 81 slovíček).
-Je to obyčejný text ve stejném formátu jako import, takže ho můžeš libovolně
-upravit, doplnit nebo celý nahradit. Načte se jen jednou; když okruhy smažeš, už
-se nevrátí (pokud je chceš zpátky, stačí importovat soubor).
+Výchozí okruhy jsou v jednom textovém souboru **`okruhy/vychozi.txt`** — ve stejném
+formátu jako import, takže ho můžeš upravovat normálně v editoru. Dnes tam je
+9 okruhů / 181 slovíček: zvířata, dům, zájmy, tělo, dny v týdně, měsíce, barvy,
+čísla od 1 do 100 a jídlo.
 
-`LOS NÚMEROS – ČÍSLA` má z tvého zápisu jen poznámku *„Zopakujte si čísla 1–100,
-včetně jejich zápisu slovy“*, takže nemá co procvičovat. Zůstane vidět v seznamu
-okruhů s poznámkou, ale nenabídne se k procvičení a nebude v Mixu. Pokud čísla
-potřebuješ, dopiš do toho okruhu slovíčka `el uno – jedna` a podobně.
+Sada se do prohlížeče načte při první návštěvě, a to jen jednou — když okruhy
+smažeš, už se nevrátí.
+
+### Jak ji aktualizovat
+
+1. Uprav `okruhy/vychozi.txt`.
+2. Spusť `node tools/sync-defaults.js` — zkusí soubor naparsovat, vypíše počty
+   okruhů a slov a přepíše `assets/data-vlastni.js`.
+3. Až nahraješ na GitHub, uživatelé kliknou na *Načíst z okruhy/vychozi.txt* v
+   sekci *Vlastní okruhy a slovíčka* a dostanou novou verzi.
+
+`assets/data-vlastni.js` je jen automaticky vygenerovaná kopie téhož textu. Musí
+existovat, protože stránku otevřenou přímo z disku (`file://`) prohlížeč nedovolí
+načíst sousední `.txt` přes `fetch` — a nechci, aby appka fungovala jen přes
+GitHub Pages. Kdybys na tenhle krok zapomněl, `node tools/test-decks.js` to
+nahlásí a vypíše, na kterém řádku se soubory liší.
+
+Tlačítko *Načíst z okruhy/vychozi.txt* jde použít, i když zanedbáš krok 2 —
+načte rovnou soubor. Jen to neprojde z `file://` (viz hláška v aplikaci); tam
+soubor přetáhni do zóny jako kterýkoli jiný.
+
+### Čísla
+
+Okruh `LOS NÚMEROS – ČÍSLA` má všech 100 čísel (1–100), třeba `treinta y uno –
+třicet jedna`. Bez článku, jako v učebnici.
+
+U 16, 22 a 26 je zapsána tradiční podoba s tildou (`dieciséis`, `veintidós`,
+`veintiséis`) — tak to píšou skripta pro cizince. Od RAE 2010 se smí i bez ní
+(`dieciseis`, `veintidos`, `veintiseis`) a v režimu Psaní ti projde obojí, protože
+se tam diakritika nepočítá. Ostatní tildy jsou povinné: `veintitrés`,
+`treinta y tres`.
+
+Pozor na rod v češtině — ve spojení je `jedna` ženského rodu: 21 je `dvacet
+jedna`, ale 22 `dvacet dva`.
 
 ## Vlastní okruhy a slovíčka
 
@@ -115,10 +145,11 @@ Pravidla:
   nebo obyčejné minus obklopené mezerami (`post-it` se tím nerozbije)
 - v jednom souboru může být víc okruhů, prázdné řádky a řádky začínající `#`
   se ignorují
-- **poznámka k okruhu** je řádek bez oddělovače s alespoň čtyřmi slovy
-  (`Zopakujte si čísla 1–100…`) — uloží se k okruhu a zobrazí v jeho řádku;
-  při exportu se zase vypíše, takže soubor za sebou nepřeruší
-- okruh může mít 0 slov — zůstane v seznamu, ale nejde procvičit
+- **poznámka k okruhu** je řádek bez oddělovače s alespoň čtyřmi slovy — uloží se
+  k okruhu a zobrazí v jeho řádku; při exportu se zase vypíše, takže soubor za
+  sebou nepřeruší
+- okruh může mít 0 slov (jen nadpis a poznámka) — zůstane v seznamu, ale nejde
+  procvičit a nepočítá se do Mixu
 - rozmezí čísel (`1–100`) se za slovíčko nerozpozná
 - rod slovíčka se doplní z článku: `el`/`los` → mužský, `la`/`las` → ženský,
   bez článku se neuvádí
@@ -161,8 +192,9 @@ Nová úroveň: zkopíruj `assets/data-a1.js` na `assets/data-b2.js`, přejmenuj
 Stránka sama Node nepotřebuje, ale v repozitáři jsou dva kontrolní skripty:
 
 ```sh
-node tools/check.js       # slovníčko: duplicity, rod, slovní druh, divné znaky
-node tools/test-decks.js  # parser vlastních okruhů, včetně okrajových případů
+node tools/check.js          # slovníčko: duplicity, rod, slovní druh, divné znaky
+node tools/test-decks.js     # parser okruhů, poznámky, ukládání, soulad souborů
+node tools/sync-defaults.js  # okruhy/vychozi.txt -> assets/data-vlastni.js
 ```
 
 ## Struktura
@@ -174,9 +206,10 @@ assets/style.css      styly
 assets/srs.js         localStorage + plánování opakování
 assets/app.js         UI a běh relace
 assets/decks.js       parser a úložiště vlastních okruhů
-assets/data-vlastni.js  výchozí sada okruhů (formát jako u importu)
+okruhy/vychozi.txt    výchozí sada okruhů — tohle upravuješ
 assets/data-*.js      slovíčka
 tools/check.js        kontrola slovníku (Node, volitelné)
 tools/test-decks.js   testy parseru okruhů
+tools/sync-defaults.js  přegeneruje assets/data-vlastni.js z okruhy/vychozi.txt
 tools/sample-okruhy.txt  vzorový soubor pro import
 ```

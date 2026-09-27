@@ -63,7 +63,10 @@
 
         <label class="lbl" for="paste-area">…nebo vlož text přímo:</label>
         <textarea id="paste-area" rows="6" spellcheck="false" placeholder="LOS ANIMALES – ZVÍŘATA&#10;el perro – pes&#10;el gato – kočka"></textarea>
-        <button class="primary" id="import-btn" type="button">Přidat okruhy</button>
+        <div class="actions">
+          <button class="primary" id="import-btn" type="button">Přidat okruhy</button>
+          <button class="ghost-btn" id="reload-defaults" type="button">Načíst z okruhy/vychozi.txt</button>
+        </div>
 
         <p class="feedback" id="decks-msg" role="status" aria-live="polite"></p>
         <div id="decks-list"></div>

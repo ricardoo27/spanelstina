@@ -1,13 +1,4 @@
-/* Výchozí sada okruhů — NEUPRAVUJ RUČNĚ.
-   Změň okruhy/vychozi.txt a spusť: node tools/sync-defaults.js
-   (testy v tools/test-decks.js hlídají, že oba soubory sedí).
-
-   Tato kopie je potřeba, protože se z index.html otevřeného přímo z disku
-   (file://) nedá fetchnout sousední .txt — prohlížeč to zablokuje. */
-window.SPANELSTINA = window.SPANELSTINA || {};
-
-/* 9 okruhů, 181 slov */
-window.SPANELSTINA.defaultDecksText = `LOS ANIMALES – ZVÍŘATA
+LOS ANIMALES – ZVÍŘATA
 el perro – pes
 el elefante – slon
 la vaca – kráva
@@ -204,4 +195,4 @@ el kiwi – kiwi
 la naranja – pomeranč
 el tomate – rajče
 la zanahoria – mrkev
-la fresa – jahoda`;
+la fresa – jahoda
