@@ -86,24 +86,36 @@
     return c;
   }
 
-  /* karty k procvičení: nejdřív ty splněné, pak nové (neuspořádané) */
+  /* karty k procvičení: nejdřív ty splněné, pak nové (neuspořádané);
+     extra = ty, které se dnes ještě neopakují, ale nejsou ani čerstvé —
+     na procvičení navíc, když už není co dělat */
   function queue(entries) {
     var t = today();
     var due = [];
     var fresh = [];
+    var rest = [];
     entries.forEach(function (e) {
       var id = e.deck + "|" + e.es;
       var c = get(id);
-      if (!c) {
+      if (!c || c.seen === 0) {
         fresh.push(e);
-      } else if (c.due <= t && c.seen > 0) {
+      } else if (c.due <= t) {
         due.push(e);
+      } else {
+        rest.push({ e: e, c: c });
       }
     });
     due.sort(function (a, b) {
-      return get(a.deck + "|" + a.es).due - get(b.level + "|" + b.es).due;
+      return get(a.deck + "|" + a.es).due - get(b.deck + "|" + b.es).due;
     });
-    return { due: due, fresh: fresh };
+    /* nejdřív ty nejméně zaběhnuté: malá lehkost, krátký interval,
+       naposledy procvičené nejdáv */
+    rest.sort(function (a, b) {
+      return a.c.ef - b.c.ef ||
+        a.c.interval - b.c.interval ||
+        (a.c.last || 0) - (b.c.last || 0);
+    });
+    return { due: due, fresh: fresh, extra: rest.map(function (x) { return x.e; }) };
   }
 
   function stats(entries) {

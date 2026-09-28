@@ -156,9 +156,15 @@
     var entries = pool(sel.deck);
     var p = plan(entries);
     var s = SRS.stats(entries);
-    var total = p.due.length + p.fresh.length;
+    var total = p.due.length + p.fresh.length + p.extra.length;
 
-    var note = "K procvičení teď: " + p.dueCount + " vyžádaných + " + p.newCount + " nových";
+    var parts = [];
+    if (p.dueCount) parts.push(p.dueCount + " vyžádaných");
+    if (p.newCount) parts.push(p.newCount + " nových");
+    if (p.extraCount) parts.push(p.extraCount + " na opakování");
+    var note = parts.length
+      ? "K procvičení teď: " + parts.join(", ")
+      : "V tomto okruhu nejsou žádná slovíčka";
     if (p.dueCount > MAX_SESSION) note += " (beru prvních " + MAX_SESSION + ")";
     el("queue-note").textContent = note + ".";
 
@@ -179,8 +185,12 @@
     st.hidden = streak === 0;
     st.textContent = "🔥 " + streak;
 
-    el("start-btn").disabled = total === 0;
-    el("start-btn").textContent = total === 0 ? "Všechno probrané ✓" : "Začít (" + total + ")";
+    /* tlačítko je mrtvé jen když v okruhu nejsou žádná slovíčka; jinak se
+       procvičovat dá vždycky */
+    el("start-btn").disabled = entries.length === 0;
+    el("start-btn").textContent = entries.length === 0 ? "Žádné okruhy"
+      : p.dueCount || p.newCount ? "Začít (" + total + ")"
+      : "Procvičit znovu (" + total + ")";
   }
 
   function show(name) {
@@ -191,32 +201,42 @@
 
   /* ---------- relace ---------- */
 
-  /* co dnes procvičit: vyžádané karty, doplněné losovanými novými */
+  /* co dnes procvičit: vyžádané karty, doplněné losovanými novými.
+     Když je jich dohromady méně než zvolená délka relace, doplní se
+     o karty, které sice ještě nepatří k dnešku, ale nejsou ani čerstvé —
+     opakování, které jde procvičovat libovolně dlouho, ne jen když „něco
+     vychází" */
   function plan(entries) {
     var q = SRS.queue(entries);
     var due = shuffle(q.due).slice(0, MAX_SESSION);
     var fresh = shuffle(q.fresh);
     var room = Math.max(0, MAX_SESSION - due.length);
     var newCount = Math.min(fresh.length, sel.limit, room);
+    var picked = due.concat(fresh.slice(0, newCount));
+    var target = Math.max(picked.length, sel.limit);
+    var extra = q.extra.slice(0, Math.max(0, target - picked.length));
     return {
       due: due,
       fresh: fresh.slice(0, newCount),
+      extra: extra,
       dueCount: due.length,
-      newCount: newCount
+      newCount: newCount,
+      extraCount: extra.length
     };
   }
 
   function start() {
     var entries = pool(sel.deck);
     var p = plan(entries);
+    var todo = p.due.concat(p.fresh, p.extra);
     session = {
       deck: sel.deck,
       mode: sel.mode,
       review: [],
-      todo: p.due.concat(p.fresh),
+      todo: todo,
       done: 0,
       missed: 0,
-      total: p.due.length + p.fresh.length,
+      total: todo.length,
       answers: [],
       startAt: Date.now()
     };
@@ -388,7 +408,7 @@
     var askCs = MODES[session.mode].dir === "es2cs";
 
     el("mc-prompt").innerHTML =
-      (askCs ? "Přelož do češtiny:" : "Jak se řekne česky?") +
+      (askCs ? "Přelož do češtiny:" : "Jak se řekne španělsky?") +
       '<span class="word">' + (askCs ? esc(e.es) : esc(e.cs)) + "</span>";
 
     /* 3 nesprávné možnosti ze stejného okruhu, s podobným slovním druhem */

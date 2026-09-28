@@ -14,7 +14,8 @@ Aplikace na učení španělských slovíček. Statický HTML/JavaScript, žádn
 - čtyři režimy: **flashcardy** (otáčení), **výběr z možností** (česky → španělsky)
   a **psaní** v obou směrech — **česky** (španělské slovo, překlad napíšeš sám)
   i **španělsky** (české slovo, španělsky to napíšeš sám)
-- plánování opakování (SM-2), karty se vrací ve vhodných intervalech
+- plánování opakování (SM-2), karty se vrací ve vhodných intervalech; když už
+  dnes není co opakovat, dá se pokračovat opakováním těch nejslabších
 - rozvrh a postup se ukládají jen do prohlížeče (localStorage) — žádný účet, žádný
   server; slovíčka se neukládají, ta se vždy čtou ze souboru
 
@@ -50,6 +51,14 @@ samostatně.
 
 Relace bere nejdřív karty, které se mají opakovat, a doplní je novými. Karta,
 kterou neznáš, se objeví znovu na konci relace.
+
+**Opakovat se dá libovolně dlouho.** Když na dnes už nic neplatí, tlačítko
+*Začít* se přepne na *Procvičit znovu* a relace se doplní kartami, které se
+sice ještě neopakují, ale nejsou ani čerstvé — od těch nejméně zaběhnutých
+(nejmenší lehkost, nejkratší interval, naposledy procvičené nejdáv). Delší
+relace jde nastavit tlačítky pod *Nové karty v této relaci*, ta volba platí
+i pro opakování. Karty přidané na opakování se normálně ohodnocují, takže
+rozvrh se jen zpřesní.
 
 **Flashcardy** — karta se otočí kliknutím, mezerem nebo Enterem. Po otočení ji
 ohodíš: *Nevím* / *Složité* / *Jisté* (klávesy 1–3).
@@ -187,6 +196,7 @@ Stránka sama Node nepotřebuje, ale v repozitáři jsou dva kontrolní skripty:
 ```sh
 node tools/check.js          # výchozí sada: duplicity, prázdné okruhy, divné znaky
 node tools/test-decks.js     # parser okruhů, načtení souboru, soulad kopie
+node tools/test-plan.js      # plánování relace (spustí app.js nad falešným DOM)
 node tools/sync-defaults.js  # okruhy/vychozi.txt -> assets/data-vlastni.js
 ```
 
@@ -203,6 +213,7 @@ okruhy/vychozi.txt    jediný zdroj slovíček — tohle upravuješ
 assets/data-vlastni.js  automatická kopie slovíček pro běh z disku (file://)
 tools/check.js        kontrola slovníku (Node, volitelné)
 tools/test-decks.js   testy parseru okruhů
+tools/test-plan.js    testy plánování relace
 tools/sync-defaults.js  přegeneruje assets/data-vlastni.js z okruhy/vychozi.txt
 tools/sample-okruhy.txt  vzorový soubor pro testy parseru
 ```
